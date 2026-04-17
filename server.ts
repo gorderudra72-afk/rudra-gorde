@@ -22,12 +22,6 @@ const getAI = () => {
       throw new Error("Neural Engine Error: GEMINI_API_KEY is missing. Please configuration your key in Settings (⚙️).");
     }
 
-    // Heuristic check: Standard Gemini keys start with 'AIza'
-    // This helps identify common copy-paste errors or incorrect tokens
-    if (!key.startsWith('AIza')) {
-      throw new Error("Neural Engine Error: API Key format is invalid. Standard Gemini keys start with 'AIza'. Note: The key you provided earlier 'AQ.Ab8...' is not a valid Gemini key.");
-    }
-
     genAI = new GoogleGenAI({ apiKey: key });
   }
   return genAI;
