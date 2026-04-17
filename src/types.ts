@@ -5,7 +5,7 @@ export interface AnalysisResult {
     label: string;
     details: string;
     score: number;
-    category: 'lighting' | 'skin' | 'eyes' | 'mouth' | 'background';
+    category: 'lighting' | 'skin' | 'eyes' | 'mouth' | 'background' | 'face';
   }[];
   summary: string;
   metadata?: {

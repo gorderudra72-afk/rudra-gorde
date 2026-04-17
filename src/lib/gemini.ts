@@ -32,12 +32,13 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
             Perform a microscopic analysis of the provided media. This is a high-stakes forensic investigation.
             
             STRICTLY EVALUATE THE FOLLOWING DEEP-TECHNICAL MARKERS:
-            1. FREQUENCY ANALYSIS: Look for "checkerboard" artifacts or unnatural high-frequency patterns typical of neural upsampling (ConvTranspose2d).
-            2. CHROMATIC ABERRATION: In real photography, lenses produce specific spectral fringing. Check if the "deepfake" face has inconsistent aberration compared to the rest of the image.
-            3. COMPRESSION ARTIFACTS: Real images have uniform JPEG block boundaries. Look for "block-edge" inconsistencies where a face has been pasted.
-            4. ILLUMINATION & SPECULARITY: Analyze the 3D surface normals vs the environmental map. Check for "floating" shadows or missing ambient occlusion.
-            5. OCULAR CORNEAL REFLECTIONS: Mismatched eye highlights or "asymmetric specularities" are key deepfake markers.
-            6. BIOMETRIC SIGNALS: If eyes or mouth are visible, look for unnatural rigidity or lack of rhythmic micro-movements.
+            1. FACIAL TOPOLOGY & MAPPING: Scan the primary subject's face. Analyze morphological symmetry, micro-expressions, and skeletal mapping. Return findings under the "face" category.
+            2. FREQUENCY ANALYSIS: Look for "checkerboard" artifacts or unnatural high-frequency patterns typical of neural upsampling (ConvTranspose2d).
+            3. CHROMATIC ABERRATION: In real photography, lenses produce specific spectral fringing. Check if the "deepfake" face has inconsistent aberration compared to the rest of the image.
+            4. COMPRESSION ARTIFACTS: Real images have uniform JPEG block boundaries. Look for "block-edge" inconsistencies where a face has been pasted.
+            5. ILLUMINATION & SPECULARITY: Analyze the 3D surface normals vs the environmental map. Check for "floating" shadows or missing ambient occlusion.
+            6. OCULAR CORNEAL REFLECTIONS: Mismatched eye highlights or "asymmetric specularities" are key deepfake markers.
+            7. BIOMETRIC SIGNALS: If eyes or mouth are visible, look for unnatural rigidity or lack of rhythmic micro-movements.
 
             JSON RESPONSE FORMAT STRICTLY NO MARKDOWN, ONLY VALID JSON.
             {
@@ -49,7 +50,7 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
                   "label": string,
                   "details": string,
                   "score": number, // 0-100
-                  "category": "lighting" | "skin" | "eyes" | "mouth" | "background"
+                  "category": "face" | "lighting" | "skin" | "eyes" | "mouth" | "background"
                 }
               ]
             }`,
@@ -74,7 +75,7 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
                   score: { type: Type.NUMBER },
                   category: { 
                     type: Type.STRING, 
-                    enum: ["lighting", "skin", "eyes", "mouth", "background"] 
+                    enum: ["face", "lighting", "skin", "eyes", "mouth", "background"] 
                   }
                 },
                 required: ["label", "details", "score", "category"]
