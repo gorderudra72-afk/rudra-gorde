@@ -106,6 +106,11 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
     
     // Check for rate limit or quota exceeded
     const errorStr = JSON.stringify(error).toLowerCase();
+    
+    if (errorStr.includes("401") || errorStr.includes("unauthorized") || errorStr.includes("invalid api key")) {
+      throw new Error("Neural Engine Error: The API Key provided appears to be invalid or unauthorized. Please ensure you are using a standard Gemini API Key (usually starts with 'AIza').");
+    }
+
     if (errorStr.includes("429") || errorStr.includes("quota") || errorStr.includes("resource_exhausted")) {
       throw new Error("System Overloaded (Quota Exceeded): You've hit the Gemini API rate limit. Please wait a 1-2 minutes or check your AI Studio plan/quota at https://ai.google.dev.");
     }
