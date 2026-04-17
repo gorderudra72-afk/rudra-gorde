@@ -18,7 +18,7 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-3.1-pro-preview",
       contents: {
         parts: [
           {
@@ -39,11 +39,20 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
             5. OCULAR CORNEAL REFLECTIONS: Mismatched eye highlights or "asymmetric specularities" are key deepfake markers.
             6. BIOMETRIC SIGNALS: If eyes or mouth are visible, look for unnatural rigidity or lack of rhythmic micro-movements.
 
-            JSON RESPONSE FORMAT:
-            - confidence: Integer (0-100) probability of MANIPULATION.
-            - isDeepfake: Boolean.
-            - summary: Technical forensic summary (min 3 sentences).
-            - findings: List of anomalies with professional descriptions.`,
+            JSON RESPONSE FORMAT STRICTLY NO MARKDOWN, ONLY VALID JSON.
+            {
+              "confidence": number, // 0-100
+              "isDeepfake": boolean,
+              "summary": string,
+              "findings": [
+                {
+                  "label": string,
+                  "details": string,
+                  "score": number, // 0-100
+                  "category": "lighting" | "skin" | "eyes" | "mouth" | "background"
+                }
+              ]
+            }`,
           },
         ]
       },
@@ -78,15 +87,18 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
     });
 
     const rawText = response.text || "";
-    // Clean potential markdown prefix/suffix
-    const cleanJson = rawText.replace(/```json/g, "").replace(/```/g, "").trim();
+    let cleanJson = rawText;
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      cleanJson = jsonMatch[0];
+    }
     const result = JSON.parse(cleanJson);
     return result as AnalysisResult;
-  } catch (error) {
+  } catch (error: any) {
     console.error("Analysis failed:", error);
-    if (error instanceof Error && error.message.includes("429")) {
+    if (error?.message?.includes("429")) {
       throw new Error("Neural Engine Overloaded: Too many requests. Please wait a moment before trying again.");
     }
-    throw new Error("Forensic analysis engine failed to process the media. Ensure your API key is correctly configured and the media format is valid.");
+    throw new Error(`Forensic engine failed: ${error?.message || "Unknown error"}`);
   }
 };
