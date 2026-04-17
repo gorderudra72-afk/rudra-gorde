@@ -17,9 +17,17 @@ let genAI: GoogleGenAI | null = null;
 const getAI = () => {
   if (!genAI) {
     const key = process.env.GEMINI_API_KEY;
+    
     if (!key || key === "undefined" || key === "") {
-      throw new Error("Neural Engine Error: GEMINI_API_KEY is missing. Please configure your API key in the AI Studio Settings menu (⚙️).");
+      throw new Error("Neural Engine Error: GEMINI_API_KEY is missing. Please configuration your key in Settings (⚙️).");
     }
+
+    // Heuristic check: Standard Gemini keys start with 'AIza'
+    // This helps identify common copy-paste errors or incorrect tokens
+    if (!key.startsWith('AIza')) {
+      throw new Error("Neural Engine Error: API Key format is invalid. Standard Gemini keys start with 'AIza'. Note: The key you provided earlier 'AQ.Ab8...' is not a valid Gemini key.");
+    }
+
     genAI = new GoogleGenAI({ apiKey: key });
   }
   return genAI;
