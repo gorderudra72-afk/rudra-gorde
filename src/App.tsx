@@ -27,6 +27,65 @@ const fileToBase64 = (file: File): Promise<string> => {
   });
 };
 
+const extractFrameFromVideo = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    const objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+    video.muted = true;
+    video.playsInline = true;
+    
+    video.onloadeddata = () => {
+      if (video.duration > 1) {
+        video.currentTime = 1;
+      } else {
+        // Fallback to start if very short
+        video.currentTime = 0;
+        if (video.duration === Infinity) {
+          // Sometimes required for some formats in browsers
+          video.currentTime = 0.1;
+        }
+      }
+    };
+    
+    video.onseeked = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        // Maintain aspect ratio but limit size to prevent huge base64 strings
+        const MAX_SIZE = 1920;
+        let width = video.videoWidth;
+        let height = video.videoHeight;
+        
+        if (width > MAX_SIZE || height > MAX_SIZE) {
+          const ratio = Math.min(MAX_SIZE / width, MAX_SIZE / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, width, height);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+          resolve(dataUrl.split(",")[1]);
+        } else {
+          reject(new Error("Canvas context failed."));
+        }
+      } catch (err) {
+        reject(err);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+
+    video.onerror = () => {
+      reject(new Error("Failed to process video file. Ensure it's a valid format."));
+      URL.revokeObjectURL(objectUrl);
+    };
+  });
+};
+
 export default function App() {
   const [state, setState] = useState<MediaState>("idle");
   const [mode, setMode] = useState<"upload" | "camera">("upload");
@@ -77,8 +136,18 @@ export default function App() {
 
     try {
       setState("analyzing");
-      const base64 = await fileToBase64(file);
-      const analysis = await analyzeMedia(base64, file.type);
+      
+      let base64;
+      let targetMimeType = file.type;
+
+      if (file.type.startsWith("video/")) {
+        base64 = await extractFrameFromVideo(file);
+        targetMimeType = "image/jpeg";
+      } else {
+        base64 = await fileToBase64(file);
+      }
+
+      const analysis = await analyzeMedia(base64, targetMimeType);
       setResult(analysis);
       setState("completed");
     } catch (err: any) {
