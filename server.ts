@@ -125,10 +125,21 @@ app.post("/api/analyze", async (req, res) => {
   } catch (error: any) {
     console.error("Forensic analysis failed:", error);
     
+    // Explicitly handle invalid API key errors with helpful guidance
     const errorStr = JSON.stringify(error).toLowerCase();
     
+    if (errorStr.includes("api_key_invalid") || errorStr.includes("400") && errorStr.includes("api key not valid")) {
+      return res.status(401).json({ 
+        error: "Neural Engine Error: The API Key you provided is invalid. \n\n" + 
+               "To fix this: \n" +
+               "1. Go to Settings (⚙️) -> Secrets in AI Studio.\n" +
+               "2. DELETE your 'GEMINI_API_KEY' custom secret to use the platform's built-in key.\n" +
+               "3. Or, go to https://aistudio.google.com/app/apikey and create a new key starting with 'AIza'." 
+      });
+    }
+
     if (errorStr.includes("401") || errorStr.includes("unauthorized") || errorStr.includes("invalid api key")) {
-      return res.status(401).json({ error: "Neural Engine Error: Invalid or unauthorized API Key." });
+      return res.status(401).json({ error: "Neural Engine Error: Unauthorized access. Please check your API Key configuration." });
     }
 
     if (errorStr.includes("429") || errorStr.includes("quota") || errorStr.includes("resource_exhausted")) {
