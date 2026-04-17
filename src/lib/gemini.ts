@@ -6,8 +6,8 @@ let genAI: GoogleGenAI | null = null;
 const getAI = () => {
   if (!genAI) {
     const key = process.env.GEMINI_API_KEY;
-    if (!key) {
-      throw new Error("Neural Engine Error: GEMINI_API_KEY is missing. Forensic system cannot initialize.");
+    if (!key || key === "undefined" || key === "") {
+      throw new Error("Neural Engine Error: GEMINI_API_KEY is missing. Please configure your API key in the AI Studio Settings menu (⚙️).");
     }
     genAI = new GoogleGenAI({ apiKey: key });
   }
