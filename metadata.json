@@ -1,0 +1,8 @@
+{
+  "name": "DeepSight: Deepfake Detection Tool",
+  "description": "An AI-powered forensic tool for identifying deepfakes and manipulated media using advanced visual analysis.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
