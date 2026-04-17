@@ -7,6 +7,7 @@ import { Shield, Fingerprint, Activity, AlertCircle, RefreshCcw, Github } from "
 import { motion, AnimatePresence } from "motion/react";
 import React, { useState, useEffect } from "react";
 import { AnalysisReport } from "./components/AnalysisReport";
+import { CameraCapture } from "./components/CameraCapture";
 import { ForensicLog } from "./components/ForensicLog";
 import { Scanner } from "./components/Scanner";
 import { UploadZone } from "./components/UploadZone";
@@ -28,6 +29,7 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 export default function App() {
   const [state, setState] = useState<MediaState>("idle");
+  const [mode, setMode] = useState<"upload" | "camera">("upload");
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -49,6 +51,22 @@ export default function App() {
     setPreview(objectUrl);
     
     // Artificial delay for "processing" feel
+    setTimeout(() => {
+      setState("scanning");
+    }, 1000);
+  };
+
+  const handleCapture = async (blob: Blob) => {
+    const capturedFile = new File([blob], "capture.jpg", { type: "image/jpeg" });
+    setFile(capturedFile);
+    setError(null);
+    setResult(null);
+    setState("uploading");
+    
+    const objectUrl = URL.createObjectURL(capturedFile);
+    if (preview) URL.revokeObjectURL(preview);
+    setPreview(objectUrl);
+    
     setTimeout(() => {
       setState("scanning");
     }, 1000);
@@ -149,11 +167,35 @@ export default function App() {
               {state === 'idle' && (
                 <motion.div
                   key="idle"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="space-y-8"
                 >
-                  <UploadZone onFileSelect={handleFileSelect} loading={false} />
+                  <div className="flex justify-center gap-4">
+                    <button
+                      onClick={() => setMode("upload")}
+                      className={`mono flex items-center gap-2 border-b-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                        mode === "upload" ? "border-cyan-500 text-cyan-500" : "border-transparent text-white/30 hover:text-white/60"
+                      }`}
+                    >
+                      File Upload
+                    </button>
+                    <button
+                      onClick={() => setMode("camera")}
+                      className={`mono flex items-center gap-2 border-b-2 px-4 py-2 text-[10px] font-bold uppercase tracking-widest transition-all ${
+                        mode === "camera" ? "border-cyan-500 text-cyan-500" : "border-transparent text-white/30 hover:text-white/60"
+                      }`}
+                    >
+                      Instant Capture
+                    </button>
+                  </div>
+
+                  {mode === "upload" ? (
+                    <UploadZone onFileSelect={handleFileSelect} loading={false} />
+                  ) : (
+                    <CameraCapture onCapture={handleCapture} onCancel={() => setMode("upload")} />
+                  )}
                 </motion.div>
               )}
 
