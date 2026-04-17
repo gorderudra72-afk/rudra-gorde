@@ -18,7 +18,7 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
   try {
     const ai = getAI();
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3-flash-preview",
       contents: {
         parts: [
           {
@@ -102,10 +102,14 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
     const result = JSON.parse(cleanJson);
     return result as AnalysisResult;
   } catch (error: any) {
-    console.error("Analysis failed:", error);
-    if (error?.message?.includes("429")) {
-      throw new Error("Neural Engine Overloaded: Too many requests. Please wait a moment before trying again.");
+    console.error("Forensic analysis failed:", error);
+    
+    // Check for rate limit or quota exceeded
+    const errorStr = JSON.stringify(error).toLowerCase();
+    if (errorStr.includes("429") || errorStr.includes("quota") || errorStr.includes("resource_exhausted")) {
+      throw new Error("System Overloaded (Quota Exceeded): You've hit the Gemini API rate limit. Please wait a 1-2 minutes or check your AI Studio plan/quota at https://ai.google.dev.");
     }
-    throw new Error(`Forensic engine failed: ${error?.message || "Unknown error"}`);
+    
+    throw new Error(`Forensic engine failed: ${error?.message || "Internal Neural Error"}`);
   }
 };
