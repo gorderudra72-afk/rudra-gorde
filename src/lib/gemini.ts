@@ -12,7 +12,14 @@ export const analyzeMedia = async (imageBase64: string, mimeType: string): Promi
 
     if (!response.ok) {
       const errorData = await response.json();
-      throw new Error(errorData.error || `Server responded with ${response.status}`);
+      let msg = errorData.error || `Server responded with ${response.status}`;
+      if (errorData.details) {
+        msg += `\n\n${errorData.details}`;
+      }
+      if (errorData.action) {
+        msg += `\n\nREQUIRED ACTION: ${errorData.action}`;
+      }
+      throw new Error(msg);
     }
 
     return await response.json();

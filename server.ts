@@ -18,9 +18,24 @@ const getAI = () => {
   if (!genAI) {
     const key = process.env.GEMINI_API_KEY;
     
-    if (!key || key === "undefined" || key === "") {
-      throw new Error("Neural Engine Error: GEMINI_API_KEY is missing. Please configuration your key in Settings (⚙️).");
+    if (!key || key === "undefined" || key === "" || key === "MY_GEMINI_API_KEY") {
+      const err = new Error("NEURAL_AUTH_MISSING: Gemini API Key is missing or using placeholder.");
+      (err as any).isForensicAuthError = true;
+      (err as any).diagnostic = "The GEMINI_API_KEY environment variable is not configured. AI Studio typically provides this automatically, but if you have overridden it with a placeholder, the engine cannot start.";
+      throw err;
     }
+
+    // DeepSight Forensic Guard: Check for known invalid patterns
+    if (key.startsWith('AQ.')) {
+      const err = new Error("NEURAL_AUTH_INVALID: Invalid key format detected.");
+      (err as any).isForensicAuthError = true;
+      (err as any).diagnostic = `The configured key starts with 'AQ.', which is likely an incorrect secret type (possibly a session token instead of an API key). Gemini keys must start with 'AIza'.`;
+      throw err;
+    }
+
+    // Diagnostic log for the engineer (masked)
+    const maskedKey = key.length > 8 ? `${key.substring(0, 4)}...${key.substring(key.length - 4)}` : "***";
+    console.log(`[Forensic Engine] Initializing with key: ${maskedKey}`);
 
     genAI = new GoogleGenAI({ apiKey: key });
   }
@@ -37,6 +52,7 @@ app.post("/api/analyze", async (req, res) => {
     }
 
     const ai = getAI();
+    
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: {
@@ -113,40 +129,43 @@ app.post("/api/analyze", async (req, res) => {
       }
     });
 
-    const rawText = response.text || "";
-    let cleanJson = rawText;
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      cleanJson = jsonMatch[0];
-    }
-    const result = JSON.parse(cleanJson);
-    res.json(result);
+    res.json(JSON.parse(response.text));
 
   } catch (error: any) {
     console.error("Forensic analysis failed:", error);
     
-    // Explicitly handle invalid API key errors with helpful guidance
-    const errorStr = JSON.stringify(error).toLowerCase();
-    
-    if (errorStr.includes("api_key_invalid") || errorStr.includes("400") && errorStr.includes("api key not valid")) {
+    // Check for our custom forensic auth errors
+    if (error.isForensicAuthError) {
       return res.status(401).json({ 
-        error: "Neural Engine Error: The API Key you provided is invalid. \n\n" + 
-               "To fix this: \n" +
-               "1. Go to Settings (⚙️) -> Secrets in AI Studio.\n" +
-               "2. DELETE your 'GEMINI_API_KEY' custom secret to use the platform's built-in key.\n" +
-               "3. Or, go to https://aistudio.google.com/app/apikey and create a new key starting with 'AIza'." 
+        error: error.message,
+        details: error.diagnostic,
+        action: "Go to Settings (⚙️) -> Secrets, DELETE the entry for 'GEMINI_API_KEY', and refresh the app."
       });
     }
 
-    if (errorStr.includes("401") || errorStr.includes("unauthorized") || errorStr.includes("invalid api key")) {
-      return res.status(401).json({ error: "Neural Engine Error: Unauthorized access. Please check your API Key configuration." });
+    // Check for API key errors specifically from the SDK
+    const errorMsg = error?.message || "";
+    const errorStack = error?.stack || "";
+    const errorString = String(error);
+    const errorFull = (errorMsg + " " + errorStack + " " + errorString).toLowerCase();
+    
+    if (
+      errorFull.includes("api_key_invalid") || 
+      errorFull.includes("api key not valid") ||
+      (errorFull.includes("400") && errorFull.includes("invalid_argument") && (errorFull.includes("key") || errorFull.includes("authentication")))
+    ) {
+       return res.status(401).json({ 
+        error: "Neural Authentication Failure",
+        details: "The API Key in the environment is being rejected by the Google Neural Registry. This often happens if the 'GEMINI_API_KEY' was copied incorrectly.",
+        action: "Go to Settings (⚙️) -> Secrets, DELETE the entry for 'GEMINI_API_KEY', and refresh the app. This allows the platform to supply a stable default key."
+      });
     }
 
-    if (errorStr.includes("429") || errorStr.includes("quota") || errorStr.includes("resource_exhausted")) {
-      return res.status(429).json({ error: "System Overloaded (Quota Exceeded). Please wait a moment." });
+    if (errorFull.includes("429") || errorFull.includes("quota") || errorFull.includes("resource_exhausted")) {
+      return res.status(429).json({ error: "System Overloaded (Quota Exceeded). Please wait 60 seconds." });
     }
     
-    res.status(500).json({ error: error?.message || "Internal Neural Error" });
+    res.status(500).json({ error: error?.message || "Internal Forensic Error" });
   }
 });
 
